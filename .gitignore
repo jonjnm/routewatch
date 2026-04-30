@@ -1,0 +1,8 @@
+node_modules/
+.cache/
+*.log
+yarn-debug.log*
+.parcel-cache/
+coverage/
+.env
+dist/
