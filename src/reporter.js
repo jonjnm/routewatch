@@ -50,10 +50,31 @@ function getSummary() {
 }
 
 /**
+ * Return stats for a single route, or null if not found.
+ * @param {string} method - HTTP method (GET, POST, etc.)
+ * @param {string} path - Route path
+ * @returns {Object|null}
+ */
+function getRoute(method, path) {
+  const key = `${method.toUpperCase()} ${path}`;
+  const entry = stats.get(key);
+  if (!entry) return null;
+  return {
+    route: `${entry.method} ${entry.path}`,
+    hits: entry.hits,
+    errors: entry.errors,
+    avgDuration:
+      entry.hits > 0 ? Math.round(entry.totalDuration / entry.hits) : 0,
+    minDuration: entry.minDuration === Infinity ? 0 : entry.minDuration,
+    maxDuration: entry.maxDuration === -Infinity ? 0 : entry.maxDuration,
+  };
+}
+
+/**
  * Clear all recorded stats (useful between tests or sessions).
  */
 function resetStats() {
   stats.clear();
 }
 
-module.exports = { recordHit, getSummary, resetStats };
+module.exports = { recordHit, getSummary, getRoute, resetStats };
