@@ -44,6 +44,12 @@ describe('buildEntry', () => {
     const entry = buildEntry(req, mockRes(), 5);
     expect(entry.body).toBeUndefined();
   });
+
+  it('prefers originalUrl over url for path', () => {
+    const req = mockReq({ url: '/different', originalUrl: '/api/users' });
+    const entry = buildEntry(req, mockRes(), 5);
+    expect(entry.path).toBe('/api/users');
+  });
 });
 
 describe('formatDefault', () => {
@@ -54,6 +60,14 @@ describe('formatDefault', () => {
     expect(result).toContain('201');
     expect(result).toContain('15ms');
     expect(result).toContain('2024-01-01T00:00:00.000Z');
+  });
+
+  it('returns a formatted string without timestamp when omitted', () => {
+    const entry = { method: 'GET', path: '/health', statusCode: 200, duration: 3 };
+    const result = formatDefault(entry);
+    expect(result).toContain('GET /health');
+    expect(result).toContain('200');
+    expect(result).toContain('3ms');
   });
 });
 
