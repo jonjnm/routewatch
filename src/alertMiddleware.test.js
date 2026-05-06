@@ -17,6 +17,19 @@ function makeMockReq(overrides = {}) {
   };
 }
 
+/**
+ * Helper to simulate a single request/response cycle through the middleware.
+ * Emits 'finish' on the response automatically.
+ */
+function fireRequest(mw, reqOverrides = {}, statusCode = 200) {
+  const req = makeMockReq(reqOverrides);
+  const res = makeMockRes(statusCode);
+  const next = jest.fn();
+  mw(req, res, next);
+  res.emit('finish');
+  return { req, res, next };
+}
+
 beforeEach(() => {
   resetAlerts();
 });
@@ -32,13 +45,10 @@ describe('alertMiddleware', () => {
   test('records a hit on response finish', () => {
     configureAlerts({ maxHitsPerMinute: 100, onAlert: () => {} });
     const mw = alertMiddleware();
-    const req = makeMockReq({ routeKey: 'GET /api/test' });
-    const res = makeMockRes(200);
-    const next = jest.fn();
 
-    mw(req, res, next);
-    res.emit('finish');
+    const { next } = fireRequest(mw, { routeKey: 'GET /api/test' }, 200);
 
+    expect(next).toHaveBeenCalledTimes(1);
     const state = getAlertState();
     expect(state.hitWindows['GET /api/test']).toHaveLength(1);
   });
@@ -50,13 +60,9 @@ describe('alertMiddleware', () => {
       onAlert: (type, route) => alerts.push({ type, route }),
     });
     const mw = alertMiddleware();
-    const next = jest.fn();
 
     for (let i = 0; i < 5; i++) {
-      const req = makeMockReq({ routeKey: 'POST /api/fail' });
-      const res = makeMockRes(500);
-      mw(req, res, next);
-      res.emit('finish');
+      fireRequest(mw, { routeKey: 'POST /api/fail' }, 500);
     }
 
     expect(alerts.some(a => a.type === 'HIGH_ERROR_RATE')).toBe(true);
@@ -65,10 +71,8 @@ describe('alertMiddleware', () => {
   test('falls back to req.path when routeKey is absent', () => {
     configureAlerts({ maxHitsPerMinute: 100, onAlert: () => {} });
     const mw = alertMiddleware();
-    const req = makeMockReq({ routeKey: null, method: 'DELETE', path: '/items/1' });
-    const res = makeMockRes(204);
-    mw(req, res, jest.fn());
-    res.emit('finish');
+
+    fireRequest(mw, { routeKey: null, method: 'DELETE', path: '/items/1' }, 204);
 
     const state = getAlertState();
     expect(state.hitWindows['DELETE /items/1']).toHaveLength(1);
@@ -80,17 +84,10 @@ describe('alertMiddleware', () => {
       maxHitsPerMinute: 1,
       onAlert: (type) => fired.push(type),
     });
-    const next = jest.fn();
 
-    const emit = (route) => {
-      const req = makeMockReq({ routeKey: route });
-      const res = makeMockRes(200);
-      mw(req, res, next);
-      res.emit('finish');
-    };
+    fireRequest(mw, { routeKey: 'GET /ping' }, 200);
+    fireRequest(mw, { routeKey: 'GET /ping' }, 200);
 
-    emit('GET /ping');
-    emit('GET /ping');
     expect(fired).toContain('HIGH_TRAFFIC');
   });
 });
