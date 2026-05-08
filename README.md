@@ -41,6 +41,19 @@ app.use(routewatch({
   logBody: true,       // Log request body (default: false)
   logHeaders: false,   // Log request headers (default: false)
   ignore: ['/health'], // Routes to skip (default: [])
+  logger: console.log, // Custom logger function (default: console.log)
+}));
+```
+
+### Custom Logger
+
+You can pass your own logging function to integrate with existing logging infrastructure:
+
+```javascript
+const winston = require('winston');
+
+app.use(routewatch({
+  logger: (message) => winston.info(message),
 }));
 ```
 
