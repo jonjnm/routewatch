@@ -33,6 +33,12 @@ function tracingMiddleware(options = {}) {
 
     const originalEnd = res.end.bind(res);
     res.end = function (...args) {
+      // Guard against res.end being called multiple times (e.g. by some middleware)
+      if (res._tracingFinished) {
+        return originalEnd(...args);
+      }
+      res._tracingFinished = true;
+
       const route = _resolveRoute(req);
       const duration = Date.now() - startedAt;
 
